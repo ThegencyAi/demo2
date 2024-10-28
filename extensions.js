@@ -1426,3 +1426,162 @@ export const TransportBookingExtension = {
     },
   }
   
+  export const DateRangeExtension = {
+    name: 'DateRange',
+    type: 'response',
+    match: ({ trace }) =>
+      trace.type === 'ext_daterange' || trace.payload.name === 'ext_daterange',
+    render: ({ trace, element }) => {
+      const formContainer = document.createElement('form')
+  
+      // Get current date and set min/max dates for date picker
+      let currentDate = new Date()
+      let minDate = new Date()
+      minDate.setMonth(currentDate.getMonth() - 1)
+      let maxDate = new Date()
+      maxDate.setMonth(currentDate.getMonth() + 2)
+  
+      // Convert to ISO string and remove time part
+      let minDateString = minDate.toISOString().slice(0, 10)
+      let maxDateString = maxDate.toISOString().slice(0, 10)
+  
+      formContainer.innerHTML = `
+        <style>
+          label {
+            font-size: 0.8em;
+            color: #888;
+          }
+          input[type="date"]::-webkit-calendar-picker-indicator {
+            border: none;
+            background: transparent;
+            border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
+            outline: none;
+            color: transparent;
+            cursor: pointer;
+            position: absolute;
+            padding: 6px;
+            font: normal 8px sans-serif;
+            width: 100%;
+            height: 100%;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            right: 0;
+          }
+          .meeting input {
+            background: transparent;
+            border: none;
+            padding: 2px;
+            border-bottom: 0.5px solid rgba(255, 0, 0, 0.5);
+            font: normal 14px sans-serif;
+            outline: none;
+            margin: 5px 0;
+            width: 100%;
+            position: relative;
+          }
+          .meeting input:focus {
+            outline: none;
+          }
+          .submit {
+            background: linear-gradient(to right, #e12e2e, #f12e2e);
+            border: none;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            width: 100%;
+            cursor: pointer;
+            opacity: 0.3;
+          }
+          .submit:enabled {
+            opacity: 1;
+          }
+        </style>
+        <label for="arrival">Select arrival date</label><br>
+        <div class="meeting">
+          <input type="date" id="arrival-date" name="arrival-date" min="${minDateString}" max="${maxDateString}" />
+        </div>
+        <label for="departure">Select departure date</label><br>
+        <div class="meeting">
+          <input type="date" id="departure-date" name="departure-date" min="" max="${maxDateString}" />
+        </div><br>
+        <input type="submit" id="submit" class="submit" value="Submit" disabled="disabled">
+      `
+  
+      const submitButton = formContainer.querySelector('#submit')
+      const arrivalDateInput = formContainer.querySelector('#arrival-date')
+      const departureDateInput = formContainer.querySelector('#departure-date')
+  
+      // Enable submit button only when both dates are selected
+      function updateSubmitButton() {
+        if (arrivalDateInput.value && departureDateInput.value) {
+          submitButton.disabled = false
+        } else {
+          submitButton.disabled = true
+        }
+      }
+  
+      // When arrival date is selected, set it as min date for departure date
+      arrivalDateInput.addEventListener('input', () => {
+        const selectedArrivalDate = new Date(arrivalDateInput.value)
+        let minDepartureDate = new Date(selectedArrivalDate)
+        minDepartureDate.setDate(selectedArrivalDate.getDate() + 1)
+        departureDateInput.min = minDepartureDate.toISOString().slice(0, 10)
+  
+        // Reset departure date if it is before the new minimum date
+        if (new Date(departureDateInput.value) < minDepartureDate) {
+          departureDateInput.value = ''
+        }
+  
+        updateSubmitButton()
+      })
+  
+      departureDateInput.addEventListener('input', updateSubmitButton)
+  
+      formContainer.addEventListener('submit', function (event) {
+        event.preventDefault()
+        const arrivalDate = arrivalDateInput.value
+        const departureDate = departureDateInput.value
+  
+        // Send the arrival and departure dates as one payload
+        console.log(`Selected arrival: ${arrivalDate}, departure: ${departureDate}`)
+        formContainer.querySelector('.submit').remove()
+        window.voiceflow.chat.interact({
+          type: 'complete',
+          payload: { arrivalDate: arrivalDate, departureDate: departureDate },
+        })
+      })
+  
+      element.appendChild(formContainer)
+  
+      // Fallback for unsupported date input
+      if (arrivalDateInput.type !== 'date') {
+        const script = document.createElement('script')
+        script.src = 'https://cdn.jsdelivr.net/npm/flatpickr'
+        script.onload = function() {
+          flatpickr(arrivalDateInput, {
+            dateFormat: "Y-m-d",
+            minDate: minDateString,
+            maxDate: maxDateString,
+            onChange: (selectedDates) => {
+              const minDeparture = new Date(selectedDates[0])
+              minDeparture.setDate(minDeparture.getDate() + 1)
+              flatpickr(departureDateInput, {
+                dateFormat: "Y-m-d",
+                minDate: minDeparture.toISOString().slice(0, 10),
+                maxDate: maxDateString,
+                onChange: updateSubmitButton
+              })
+            }
+          })
+          flatpickr(departureDateInput, {
+            dateFormat: "Y-m-d",
+            minDate: minDateString,
+            maxDate: maxDateString,
+            onChange: updateSubmitButton
+          })
+        }
+        document.head.appendChild(script)
+      }
+    },
+  }
+ 
