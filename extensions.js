@@ -1207,3 +1207,222 @@ export const MenuExtension = {
     element.appendChild(menuContainer);
   },
 }
+
+export const TransportBookingExtension = {
+    name: 'TransportBooking',
+    type: 'response',
+    match: ({ trace }) =>
+      trace.type === 'ext_transport_booking' || trace.payload.name === 'ext_transport_booking',
+    render: ({ trace, element }) => {
+      const formContainer = document.createElement('div');
+  
+      formContainer.innerHTML = `
+        <style>
+          .transport-booking-form {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            max-width: 300px;
+            margin: 0 auto;
+          }
+          .transport-booking-form input[type="text"],
+          .transport-booking-form input[type="date"],
+          .transport-booking-form input[type="time"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            box-sizing: border-box;
+            font-size: 14px;
+          }
+          .passenger-dropdown {
+            position: relative;
+            cursor: pointer;
+            margin-bottom: 20px;
+          }
+          .passenger-dropdown .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1;
+            width: 100%;
+            margin-top: 5px;
+          }
+          .passenger-dropdown.open .dropdown-content {
+            display: block;
+          }
+          .passenger-dropdown button {
+            width: 100%;
+            border-radius: 8px;
+            padding: 10px;
+            background: linear-gradient(to right, #00f, #0077ff);
+            color: white;
+            border: none;
+            cursor: pointer;
+          }
+          .passenger-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+          }
+          .passenger-controls .count {
+            width: 40px;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 5px 0;
+            font-size: 14px;
+          }
+          .passenger-controls button {
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
+            border: none;
+            background: linear-gradient(to right, #0077ff, #00f);
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .passenger-controls button:hover {
+            opacity: 0.9;
+          }
+          .submit {
+            background: linear-gradient(to right, #8A2BE2, #6B4EFF);
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 20px;
+            width: 100%;
+            cursor: pointer;
+            font-size: 16px;
+            transition: opacity 0.3s;
+          }
+          .submit:hover {
+            opacity: 0.9;
+          }
+        </style>
+  
+        <form class="transport-booking-form">
+          <input type="text" id="departure" name="departure" placeholder="Departure" required>
+          <input type="text" id="destination" name="destination" placeholder="Destination" required>
+  
+          <div class="passenger-dropdown">
+            <button type="button" id="passenger-toggle">Select Passengers</button>
+            <div class="dropdown-content">
+              <div class="passenger-controls" data-type="adult">
+                <span>Adults</span>
+                <button type="button" class="subtract-button">-</button>
+                <input type="text" class="count adult-count" value="0" readonly>
+                <button type="button" class="add-button">+</button>
+              </div>
+              <div class="passenger-controls" data-type="child">
+                <span>Children</span>
+                <button type="button" class="subtract-button">-</button>
+                <input type="text" class="count child-count" value="0" readonly>
+                <button type="button" class="add-button">+</button>
+              </div>
+              <div class="passenger-controls" data-type="baby">
+                <span>Babies</span>
+                <button type="button" class="subtract-button">-</button>
+                <input type="text" class="count baby-count" value="0" readonly>
+                <button type="button" class="add-button">+</button>
+              </div>
+            </div>
+          </div>
+  
+          <input type="date" id="date" name="date" required>
+          <input type="time" id="time" name="time" required>
+  
+          <button type="submit" class="submit">Book Now</button>
+        </form>
+      `;
+  
+      const form = formContainer.querySelector('.transport-booking-form');
+      const passengerToggle = form.querySelector('#passenger-toggle');
+      const passengerDropdown = form.querySelector('.passenger-dropdown');
+  
+      passengerToggle.addEventListener('click', () => {
+        passengerDropdown.classList.toggle('open');
+      });
+  
+      const updateCount = (type, increment) => {
+        const countElement = form.querySelector(`.${type}-count`);
+        let currentCount = parseInt(countElement.value);
+        if (increment) {
+          currentCount += 1;
+        } else if (currentCount > 0) {
+          currentCount -= 1;
+        }
+        countElement.value = currentCount;
+        console.log(`${type} count updated to: ${currentCount}`); // Debug log
+      };
+  
+      passengerDropdown.addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button) return;
+  
+        const control = button.closest('.passenger-controls');
+        if (!control) return;
+  
+        const type = control.getAttribute('data-type');
+        console.log('Button clicked:', button.className, 'for type:', type); // Debug log
+  
+        if (button.classList.contains('add-button')) {
+          updateCount(type, true);
+        } else if (button.classList.contains('subtract-button')) {
+          updateCount(type, false);
+        }
+      });
+  
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+  
+        const formData = new FormData(form);
+        const bookingData = {
+          departure: formData.get('departure'),
+          destination: formData.get('destination'),
+          date: formData.get('date'),
+          time: formData.get('time'),
+          adults: parseInt(form.querySelector('.adult-count').value),
+          children: parseInt(form.querySelector('.child-count').value),
+          babies: parseInt(form.querySelector('.baby-count').value),
+        };
+  
+        if (!bookingData.departure || !bookingData.destination || !bookingData.date || !bookingData.time || 
+            (bookingData.adults + bookingData.children + bookingData.babies === 0)) {
+          alert('Please fill in all the required fields and select at least one passenger.');
+          return;
+        }
+  
+        // Constructing the payload
+        const payload = {
+          booking: {
+            destination: bookingData.destination,
+            date: bookingData.date,
+            time: bookingData.time,
+            adults: bookingData.adults,
+            children: bookingData.children,
+            babies: bookingData.babies,
+          },
+        };
+  
+        console.log('Booking data:', payload); // Debug log
+  
+        window.voiceflow.chat.interact({
+          type: 'complete',
+          payload: payload,
+        });
+      });
+  
+      element.appendChild(formContainer);
+    },
+  }
+  
