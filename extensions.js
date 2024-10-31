@@ -1424,164 +1424,275 @@ export const TransportBookingExtension = {
   
       element.appendChild(formContainer);
     },
-  }
+}
   
-  export const DateRangeExtension = {
-    name: 'DateRange',
+  export const DateTimeGuestExtension = {
+    name: 'DateTimeGuest',
     type: 'response',
-    match: ({ trace }) =>
-      trace.type === 'ext_daterange' || trace.payload.name === 'ext_daterange',
+    match: ({ trace }) => trace.type === 'ext_datetime_guest' || trace.payload.name === 'ext_datetime_guest',
     render: ({ trace, element }) => {
-      const formContainer = document.createElement('form')
-  
-      // Get current date and set min/max dates for date picker
-      let currentDate = new Date()
-      let minDate = new Date()
-      minDate.setMonth(currentDate.getMonth() - 1)
-      let maxDate = new Date()
-      maxDate.setMonth(currentDate.getMonth() + 2)
-  
-      // Convert to ISO string and remove time part
-      let minDateString = minDate.toISOString().slice(0, 10)
-      let maxDateString = maxDate.toISOString().slice(0, 10)
-  
-      formContainer.innerHTML = `
-        <style>
-          label {
-            font-size: 0.8em;
-            color: #888;
-          }
-          input[type="date"]::-webkit-calendar-picker-indicator {
-            border: none;
-            background: transparent;
-            border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
-            outline: none;
-            color: transparent;
-            cursor: pointer;
-            position: absolute;
-            padding: 6px;
-            font: normal 8px sans-serif;
-            width: 100%;
-            height: 100%;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            right: 0;
-          }
-          .meeting input {
-            background: transparent;
-            border: none;
-            padding: 2px;
-            border-bottom: 0.5px solid rgba(255, 0, 0, 0.5);
-            font: normal 14px sans-serif;
-            outline: none;
-            margin: 5px 0;
-            width: 100%;
-            position: relative;
-          }
-          .meeting input:focus {
-            outline: none;
-          }
-          .submit {
-            background: linear-gradient(to right, #e12e2e, #f12e2e);
-            border: none;
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            width: 100%;
-            cursor: pointer;
-            opacity: 0.3;
-          }
-          .submit:enabled {
-            opacity: 1;
-          }
-        </style>
-        <label for="arrival">Select arrival date</label><br>
-        <div class="meeting">
-          <input type="date" id="arrival-date" name="arrival-date" min="${minDateString}" max="${maxDateString}" />
-        </div>
-        <label for="departure">Select departure date</label><br>
-        <div class="meeting">
-          <input type="date" id="departure-date" name="departure-date" min="" max="${maxDateString}" />
-        </div><br>
-        <input type="submit" id="submit" class="submit" value="Submit" disabled="disabled">
-      `
-  
-      const submitButton = formContainer.querySelector('#submit')
-      const arrivalDateInput = formContainer.querySelector('#arrival-date')
-      const departureDateInput = formContainer.querySelector('#departure-date')
-  
-      // Enable submit button only when both dates are selected
-      function updateSubmitButton() {
-        if (arrivalDateInput.value && departureDateInput.value) {
-          submitButton.disabled = false
-        } else {
-          submitButton.disabled = true
-        }
-      }
-  
-      // When arrival date is selected, set it as min date for departure date
-      arrivalDateInput.addEventListener('input', () => {
-        const selectedArrivalDate = new Date(arrivalDateInput.value)
-        let minDepartureDate = new Date(selectedArrivalDate)
-        minDepartureDate.setDate(selectedArrivalDate.getDate() + 1)
-        departureDateInput.min = minDepartureDate.toISOString().slice(0, 10)
-  
-        // Reset departure date if it is before the new minimum date
-        if (new Date(departureDateInput.value) < minDepartureDate) {
-          departureDateInput.value = ''
-        }
-  
-        updateSubmitButton()
-      })
-  
-      departureDateInput.addEventListener('input', updateSubmitButton)
-  
-      formContainer.addEventListener('submit', function (event) {
-        event.preventDefault()
-        const arrivalDate = arrivalDateInput.value
-        const departureDate = departureDateInput.value
-  
-        // Send the arrival and departure dates as one payload
-        console.log(`Selected arrival: ${arrivalDate}, departure: ${departureDate}`)
-        formContainer.querySelector('.submit').remove()
-        window.voiceflow.chat.interact({
-          type: 'complete',
-          payload: { arrivalDate: arrivalDate, departureDate: departureDate },
-        })
-      })
-  
-      element.appendChild(formContainer)
-  
-      // Fallback for unsupported date input
-      if (arrivalDateInput.type !== 'date') {
-        const script = document.createElement('script')
-        script.src = 'https://cdn.jsdelivr.net/npm/flatpickr'
-        script.onload = function() {
-          flatpickr(arrivalDateInput, {
-            dateFormat: "Y-m-d",
-            minDate: minDateString,
-            maxDate: maxDateString,
-            onChange: (selectedDates) => {
-              const minDeparture = new Date(selectedDates[0])
-              minDeparture.setDate(minDeparture.getDate() + 1)
-              flatpickr(departureDateInput, {
-                dateFormat: "Y-m-d",
-                minDate: minDeparture.toISOString().slice(0, 10),
-                maxDate: maxDateString,
-                onChange: updateSubmitButton
-              })
-            }
-          })
-          flatpickr(departureDateInput, {
-            dateFormat: "Y-m-d",
-            minDate: minDateString,
-            maxDate: maxDateString,
-            onChange: updateSubmitButton
-          })
-        }
-        document.head.appendChild(script)
-      }
-    },
+        const formContainer = document.createElement('form');
+
+        // Current date for min/max inputs
+        const currentDate = new Date();
+        const minDate = currentDate.toISOString().slice(0, 10); // Min date is today
+
+        formContainer.innerHTML = `
+<style>
+  /* Styles for your form elements */
+  form {
+    font-family: Arial, sans-serif;
+    max-width: 400px;
+    margin: 0 auto;
   }
- 
+  label {
+    display: block;
+    margin-top: 10px;
+    font-size: 1em;
+    color: #333;
+  }
+  input[type="date"],
+  input[type="number"] {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border: 0.3px solid #ffbe60; /* Custom border color */
+    border-radius: 20px; /* Rounded corners */
+    transition: border-color 0.3s; /* Smooth transition for border color */
+  }
+  input[type="date"]:focus,
+  input[type="number"]:focus {
+    border-color: lightgoldenrod; /* Darker gold on focus */
+  }
+  input[type="submit"] {
+    margin-top: 15px;
+    background-color: #f4b151; /* Custom color for submit button */
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 20px; /* Rounded corners for submit button */
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.3s; /* Smooth transition for background color */
+  }
+  input[type="submit"]:hover {
+    background-color: #AB7221; /* Change background on hover */
+  }
+  .confirmation-message {
+    margin-top: 15px;
+    color: #333; /* Normal color, not bold */
+    text-align: center;
+    display: none; /* Hide by default */
+    padding: 10px; /* Increased padding */
+  }
+</style>
+
+<label for="arrival-date">Arrival Date</label>
+<input type="date" id="arrival-date" name="arrival-date" min="${minDate}" required>
+
+<label for="departure-date">Departure Date</label>
+<input type="date" id="departure-date" name="departure-date" min="${minDate}" required>
+
+<label for="adults">Number of Adults</label>
+<input type="number" id="adults" name="adults" min="1" value="1" required>
+
+<label for="children">Number of Children</label>
+<input type="number" id="children" name="children" min="0" value="0">
+
+<input type="submit" id="submit" class="submit" value="Submit">
+<div class="confirmation-message" id="confirmation-message">Your submission was successful!</div>
+        `;
+
+        const arrivalDateInput = formContainer.querySelector('#arrival-date');
+        const departureDateInput = formContainer.querySelector('#departure-date');
+        const submitButton = formContainer.querySelector('#submit');
+        const confirmationMessage = formContainer.querySelector('#confirmation-message');
+
+        arrivalDateInput.addEventListener('change', function () {
+            const arrivalDate = new Date(arrivalDateInput.value);
+            const departureDate = new Date(departureDateInput.value);
+            const departureDateMin = new Date(arrivalDate);
+            departureDateMin.setDate(arrivalDate.getDate() + 1); // Ensure departure is at least one day after arrival
+            departureDateInput.min = departureDateMin.toISOString().slice(0, 10);
+
+            // Highlight dates
+            departureDateInput.classList.add('hovered');
+        });
+
+        departureDateInput.addEventListener('change', function () {
+            const arrivalDate = new Date(arrivalDateInput.value);
+            const departureDate = new Date(departureDateInput.value);
+            const allDates = [];
+
+            for (let d = arrivalDate; d <= departureDate; d.setDate(d.getDate() + 1)) {
+                allDates.push(new Date(d));
+            }
+
+            allDates.forEach(date => {
+                const formattedDate = date.toISOString().slice(0, 10);
+                // You can add logic here to highlight or mark these dates in your UI if needed
+            });
+        });
+
+        formContainer.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const arrivalDate = arrivalDateInput.value;
+            const departureDate = departureDateInput.value;
+            const adults = formContainer.querySelector('#adults').value;
+            const children = formContainer.querySelector('#children').value;
+
+            // Log for debugging (optional)
+            console.log(`Arrival Date: ${arrivalDate}`);
+            console.log(`Departure Date: ${departureDate}`);
+            console.log(`Adults: ${adults}`);
+            console.log(`Children: ${children}`);
+
+            // Send the input values as one payload
+            window.voiceflow.chat.interact({
+                type: 'complete',
+                payload: { 
+                    arrivalDate, 
+                    departureDate, 
+                    adults, 
+                    children 
+                },
+            });
+
+            // Disable the form inputs and hide the submit button
+            formContainer.querySelectorAll('input').forEach(input => {
+                input.disabled = true; // Disable all inputs
+            });
+            submitButton.style.display = 'none'; // Hide the submit button
+            confirmationMessage.style.display = 'block'; // Show confirmation message
+        });
+
+        element.appendChild(formContainer);
+    },
+}
+
+export const ContactFormExtension = {
+  name: 'ContactForm',
+  type: 'response',
+  match: ({ trace }) =>
+      trace.type === 'Custom_Form' || trace.payload.name === 'Custom_Form',
+  render: ({ trace, element }) => {
+      const formContainer = document.createElement('form');
+
+      formContainer.innerHTML = `
+    <style>
+      label {
+        font-size: 0.8em;
+        color: #AB7221; /* Orange label color */
+        display: block;
+        margin-bottom: 3px; /* Reduced space under label */
+      }
+      input[type="text"], input[type="email"], input[type="tel"] {
+        width: 90%; /* Shortened width */
+        border: 0.2px solid #ffd966; /* Matching border color */
+        border-radius: 20px; /* Rounded corners */
+        background: transparent;
+        margin-bottom: 10px; /* Reduced space between inputs */
+        padding: 8px;
+        color: #333; /* Dark text color */
+        font-size: 1em;
+        outline: none;
+        display: block;
+        margin-left: auto; /* Center align */
+        margin-right: auto; /* Center align */
+      }
+      input[type="text"]:focus, input[type="email"]:focus, input[type="tel"]:focus {
+        border-color: #AB7221;
+        box-shadow: 0 0 5px rgba(171, 114, 33, 0.4); /* Subtle shadow effect */
+      }
+      .invalid {
+        border-color: red;
+      }
+      .submit {
+        background: #AB7221; /* Solid orange background */
+        border: none;
+        color: white;
+        padding: 12px; /* Increased padding */
+        border-radius: 20px; /* Rounded corners for submit button */
+        width: 90%; /* Width of submit button */
+        cursor: pointer;
+        font-size: 1em;
+        font-weight: bold;
+        display: block;
+        margin-left: auto; /* Center align */
+        margin-right: auto; /* Center align */
+        transition: background-color 0.3s; /* Smooth transition for background color */
+      }
+      .submit:hover {
+        background: #915e1d; /* Slightly darker orange on hover */
+      }
+      .confirmation-message {
+        margin-top: 15px;
+        color: #333; /* Normal color */
+        text-align: center;
+        display: none; /* Hide by default */
+        padding: 10px; /* Increased padding */
+      }
+    </style>
+
+    <label for="name">Name</label>
+    <input type="text" class="name" name="name" required>
+    
+    <label for="email">Email</label>
+    <input type="email" class="email" name="email" required pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$" title="Invalid email address">
+    
+    <label for="phone">Phone Number</label>
+    <input type="tel" class="phone" name="phone" required pattern="\\d+" title="Invalid phone number, please enter only numbers">
+    
+    <input type="submit" class="submit" value="Submit">
+    <div class="confirmation-message" id="confirmation-message">Your submission was successful!</div>
+    `;
+
+      const nameInput = formContainer.querySelector('.name');
+      const emailInput = formContainer.querySelector('.email');
+      const phoneInput = formContainer.querySelector('.phone');
+      const confirmationMessage = formContainer.querySelector('#confirmation-message');
+
+      formContainer.addEventListener('input', function () {
+          if (nameInput.checkValidity()) nameInput.classList.remove('invalid');
+          if (emailInput.checkValidity()) emailInput.classList.remove('invalid');
+          if (phoneInput.checkValidity()) phoneInput.classList.remove('invalid');
+      });
+
+      formContainer.addEventListener('submit', function (event) {
+          event.preventDefault();
+
+          if (
+              !nameInput.checkValidity() ||
+              !emailInput.checkValidity() ||
+              !phoneInput.checkValidity()
+          ) {
+              nameInput.classList.add('invalid');
+              emailInput.classList.add('invalid');
+              phoneInput.classList.add('invalid');
+              return;
+          }
+
+          // Disable the form inputs and hide the submit button
+          formContainer.querySelectorAll('input').forEach(input => {
+              input.disabled = true; // Disable all inputs
+          });
+          formContainer.querySelector('.submit').style.display = 'none'; // Hide the submit button
+
+          // Send the input values as one payload
+          window.voiceflow.chat.interact({
+              type: 'complete',
+              payload: { 
+                  name: nameInput.value, 
+                  email: emailInput.value, 
+                  phone: phoneInput.value 
+              },
+          });
+
+          // Show the confirmation message
+          confirmationMessage.style.display = 'block'; // Show confirmation message
+      });
+
+      element.appendChild(formContainer);
+  },
+}
