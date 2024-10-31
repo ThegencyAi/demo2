@@ -1642,7 +1642,7 @@ export const ContactFormExtension = {
     <input type="email" class="email" name="email" required pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$" title="Invalid email address">
     
     <label for="phone">Phone Number</label>
-    <input type="tel" class="phone" name="phone" required pattern="\\d+" title="Invalid phone number, please enter only numbers">
+    <input type="tel" class="phone" name="phone" required pattern="(\\+\\d{1,3}[- ]?)?\\d{10}" title="Invalid phone number, please enter a valid number (e.g., +212 123456789)">
     
     <input type="submit" class="submit" value="Submit">
     <div class="confirmation-message" id="confirmation-message">Your submission was successful!</div>
