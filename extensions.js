@@ -1642,7 +1642,7 @@ export const ContactFormExtension = {
     <input type="email" class="email" name="email" required pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$" title="Invalid email address">
     
     <label for="phone">Phone Number</label>
-    <input type="tel" class="phone" name="phone" required pattern="(\\+\\d{1,3}[- ]?)?\\d{10}" title="Invalid phone number, please enter a valid number (e.g., +212 123456789)">
+    <input type="tel" class="phone" name="phone">
     
     <input type="submit" class="submit" value="Submit">
     <div class="confirmation-message" id="confirmation-message">Your submission was successful!</div>
@@ -1656,7 +1656,6 @@ export const ContactFormExtension = {
       formContainer.addEventListener('input', function () {
           if (nameInput.checkValidity()) nameInput.classList.remove('invalid');
           if (emailInput.checkValidity()) emailInput.classList.remove('invalid');
-          if (phoneInput.checkValidity()) phoneInput.classList.remove('invalid');
       });
 
       formContainer.addEventListener('submit', function (event) {
@@ -1664,12 +1663,10 @@ export const ContactFormExtension = {
 
           if (
               !nameInput.checkValidity() ||
-              !emailInput.checkValidity() ||
-              !phoneInput.checkValidity()
+              !emailInput.checkValidity()
           ) {
               nameInput.classList.add('invalid');
               emailInput.classList.add('invalid');
-              phoneInput.classList.add('invalid');
               return;
           }
 
@@ -1685,7 +1682,7 @@ export const ContactFormExtension = {
               payload: { 
                   name: nameInput.value, 
                   email: emailInput.value, 
-                  phone: phoneInput.value 
+                  phone: phoneInput.value || "" // Allow empty phone value
               },
           });
 
